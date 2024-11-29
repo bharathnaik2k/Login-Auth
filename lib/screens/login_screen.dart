@@ -1,8 +1,10 @@
 import 'dart:convert';
+import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:login_auth/home_screen.dart';
+import 'package:login_auth/api/api_address.dart';
+import 'package:login_auth/screens/home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -14,13 +16,13 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   TextEditingController username = TextEditingController();
   TextEditingController password = TextEditingController();
+  bool circleProgress = false;
 
   alertdailog(String text) {
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
-          actionsAlignment: MainAxisAlignment.center,
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           content: Row(
@@ -30,6 +32,28 @@ class _LoginScreenState extends State<LoginScreen> {
               Text(text),
             ],
           ),
+          actionsPadding: const EdgeInsets.only(bottom: 10),
+          actionsAlignment: MainAxisAlignment.center,
+          actions: [
+            TextButton(
+              style: ButtonStyle(
+                backgroundColor: const MaterialStatePropertyAll(
+                  Colors.blue,
+                ),
+                shape: MaterialStatePropertyAll(
+                  RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text(
+                "Close",
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
           title: const Icon(Icons.warning_rounded),
         );
       },
@@ -37,13 +61,18 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void fecthdata(String token) async {
-    String url = 'https://dummyjson.com/auth/me';
+    String url = fecthdataUrl;
     Uri uri = Uri.parse(url);
     dynamic response = await http.get(
       uri,
       headers: {'Authorization': 'Bearer $token'},
     );
     dynamic userdata = jsonDecode(response.body);
+    setState(() {
+      circleProgress = false;
+    });
+    log(userdata.toString());
+    // print(userdata.toString());
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
         builder: (context) {
@@ -56,15 +85,14 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void login() async {
-    String url = "https://dummyjson.com/auth/login";
+    String url = loginUrl;
     Uri uri = Uri.parse(url);
-    Map<String, dynamic> body = {
-      "username": username.text.trim(),
-      "password": password.text.trim(),
-    };
     dynamic response = await http.post(
       uri,
-      body: jsonEncode(body),
+      body: jsonEncode({
+        "username": username.text.trim(),
+        "password": password.text.trim(),
+      }),
       headers: {'Content-Type': 'application/json'},
     );
     dynamic rbody = jsonDecode(response.body);
@@ -72,6 +100,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (token == "null") {
       alertdailog("Invaild Username or Password");
+      setState(() {
+        circleProgress = false;
+      });
     } else {
       fecthdata(token);
     }
@@ -114,6 +145,7 @@ class _LoginScreenState extends State<LoginScreen> {
             const SizedBox(height: 16),
             TextButton(
               style: ButtonStyle(
+                minimumSize: const MaterialStatePropertyAll(Size(160, 45)),
                 shape: MaterialStatePropertyAll(
                   RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10)),
@@ -123,20 +155,29 @@ class _LoginScreenState extends State<LoginScreen> {
               onPressed: () {
                 setState(() {
                   if (username.text.isEmpty && password.text.isEmpty) {
-                    alertdailog("Fill The Username And Password");
+                    alertdailog("Fill The Details");
                   } else if (username.text.isEmpty) {
                     alertdailog("Fill The Username");
                   } else if (password.text.isEmpty) {
                     alertdailog("Fill The Password");
                   } else {
                     login();
+                    circleProgress = true;
                   }
                 });
               },
-              child: const Text(
-                "Login",
-                style: TextStyle(color: Colors.white),
-              ),
+              child: circleProgress == true
+                  ? const SizedBox(
+                      height: 28,
+                      width: 28,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Text(
+                      "Login",
+                      style: TextStyle(color: Colors.white),
+                    ),
             ),
           ],
         ),
