@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:solar_charger/login_screen.dart';
+import 'package:login_auth/login_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -15,4 +15,3 @@ class MyApp extends StatelessWidget {
     );
   }
 }
-
