@@ -1,10 +1,12 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:login_auth/api/api_address.dart';
-import 'package:login_auth/screens/home_screen.dart';
+import 'package:login_auth/login_auth/api/api_address.dart';
+import 'package:login_auth/login_auth/screens/home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -60,7 +62,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  void fecthdata(String token) async {
+  Future<void> fecthdata(String token) async {
     String url = fecthdataUrl;
     Uri uri = Uri.parse(url);
     dynamic response = await http.get(
@@ -71,8 +73,6 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() {
       circleProgress = false;
     });
-    log(userdata.toString());
-    // print(userdata.toString());
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
         builder: (context) {
@@ -84,27 +84,43 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  void login() async {
-    String url = loginUrl;
-    Uri uri = Uri.parse(url);
-    dynamic response = await http.post(
-      uri,
-      body: jsonEncode({
-        "username": username.text.trim(),
-        "password": password.text.trim(),
-      }),
-      headers: {'Content-Type': 'application/json'},
-    );
-    dynamic rbody = jsonDecode(response.body);
-    String token = rbody["accessToken"].toString();
+  Future<void> login() async {
+    try {
+      String url = loginUrl;
+      Uri uri = Uri.parse(url);
+      dynamic response = await http.post(
+        uri,
+        body: jsonEncode({
+          "username": username.text.trim(),
+          "password": password.text.trim(),
+        }),
+        headers: {'Content-Type': 'application/json'},
+      );
+      dynamic rbody = jsonDecode(response.body);
+      String token = rbody["accessToken"].toString();
 
-    if (token == "null") {
-      alertdailog("Invaild Username or Password");
+      if (token == "null") {
+        alertdailog("Invaild Username or Password");
+        setState(() {
+          circleProgress = false;
+        });
+      } else {
+        fecthdata(token);
+      }
+    } on TimeoutException {
       setState(() {
         circleProgress = false;
       });
-    } else {
-      fecthdata(token);
+      var snackBar = const SnackBar(content: Text('Timeout'));
+      ScaffoldMessenger.of(context).showSnackBar(snackBar);
+    } on SocketException {
+      setState(() {
+        circleProgress = false;
+      });
+      var snackBar = const SnackBar(content: Text('No Internet'));
+      ScaffoldMessenger.of(context).showSnackBar(snackBar);
+    } on Error catch (e) {
+      log(e.toString());
     }
   }
 
@@ -121,9 +137,10 @@ class _LoginScreenState extends State<LoginScreen> {
             const SizedBox(height: 30),
             TextField(
               controller: username,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
+                hintStyle: TextStyle(color: Colors.grey.shade500),
                 hintText: "Username",
-                border: OutlineInputBorder(
+                border: const OutlineInputBorder(
                   borderSide: BorderSide(
                     color: Colors.black,
                   ),
@@ -133,9 +150,10 @@ class _LoginScreenState extends State<LoginScreen> {
             const SizedBox(height: 8),
             TextField(
               controller: password,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
+                hintStyle: TextStyle(color: Colors.grey.shade500),
                 hintText: "Password",
-                border: OutlineInputBorder(
+                border: const OutlineInputBorder(
                   borderSide: BorderSide(
                     color: Colors.black,
                   ),
@@ -150,21 +168,27 @@ class _LoginScreenState extends State<LoginScreen> {
                   RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10)),
                 ),
-                backgroundColor: const MaterialStatePropertyAll(Colors.blue),
+                backgroundColor: circleProgress == true
+                    ? const MaterialStatePropertyAll(
+                        Color.fromARGB(255, 130, 199, 255))
+                    : const MaterialStatePropertyAll(Colors.blue),
               ),
               onPressed: () {
-                setState(() {
-                  if (username.text.isEmpty && password.text.isEmpty) {
-                    alertdailog("Fill The Details");
-                  } else if (username.text.isEmpty) {
-                    alertdailog("Fill The Username");
-                  } else if (password.text.isEmpty) {
-                    alertdailog("Fill The Password");
-                  } else {
-                    login();
-                    circleProgress = true;
-                  }
-                });
+                if (circleProgress == false) {
+                  setState(() {
+                    if (username.text.isEmpty && password.text.isEmpty) {
+                      alertdailog("Fill The Details");
+                    } else if (username.text.isEmpty) {
+                      alertdailog("Fill The Username");
+                    } else if (password.text.isEmpty) {
+                      alertdailog("Fill The Password");
+                    } else {
+                      login();
+                      circleProgress = true;
+                    }
+                  });
+                }
+                FocusManager.instance.primaryFocus?.unfocus();
               },
               child: circleProgress == true
                   ? const SizedBox(
