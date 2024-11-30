@@ -6,8 +6,8 @@ use for authentication [dummyJison.com](https://dummyjson.com/docs/auth) it's a 
 
 
 ## login username and password
-Username : emilys
-Password : emilyspass
+- Username : emilys
+- Password : emilyspass
 
 ## Video Preview
 
